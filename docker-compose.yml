@@ -1,0 +1,35 @@
+version: "3.9"
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: app
+      POSTGRES_PASSWORD: app
+      POSTGRES_DB: barfield
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+  server:
+    build: ./server
+    depends_on:
+      - db
+    environment:
+      # For Postgres deployment, override DATABASE_URL like:
+      # postgres://app:app@db:5432/barfield?schema=public
+      DATABASE_URL: postgres://app:app@db:5432/barfield?schema=public
+      PORT: 4000
+      CORS_ORIGIN: http://localhost:5173
+    ports:
+      - "4000:4000"
+    volumes:
+      - ./server/uploads:/app/uploads
+  client:
+    build: ./client
+    depends_on:
+      - server
+    ports:
+      - "5173:5173"
+volumes:
+  pgdata:

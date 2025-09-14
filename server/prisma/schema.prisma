@@ -1,0 +1,142 @@
+// prisma/schema.prisma
+
+// ---------- Datasource & generator ----------
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// ---------- Auth / Users (no Prisma enums on SQLite) ----------
+model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String?
+  /// Allowed values in your app code: "ADMIN" | "MANAGER" | "ESTIMATOR" | "VIEWER"
+  role      String    // 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
+  passwordHash String?   // optional if you want to store hashed passwords
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Bids where this user is the owner
+  bidsOwned Bid[]    @relation("BidOwner")
+}
+
+// ---------- Core models ----------
+model Company {
+  id        Int       @id @default(autoincrement())
+  name      String
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  contacts  Contact[]
+  bids      Bid[]
+}
+
+model Contact {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String?
+  phone     String?
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id])
+
+  // Link back to bids (contact on a bid)
+  bids      Bid[]    @relation("BidContact")
+}
+
+model Bid {
+  id               Int         @id @default(autoincrement())
+  projectName      String
+
+  // Client & contact relations
+  clientCompanyId  Int
+  clientCompany    Company     @relation(fields: [clientCompanyId], references: [id])
+
+  contactId        Int?
+  contact          Contact?    @relation("BidContact", fields: [contactId], references: [id])
+
+  // Optional owner (user) for permissions/visibility
+  ownerId          Int?
+  owner            User?       @relation("BidOwner", fields: [ownerId], references: [id])
+
+  // Meta
+  proposalDate     DateTime?
+  dueDate          DateTime?
+  jobLocation      String?
+  leadSource       String?
+
+  // Tabs: "Active" | "Complete" | "Archived" (keep as String on SQLite)
+  bidStatus        String
+  archived         Boolean     @default(false)
+
+  // Relations
+  scopes           Scope[]
+  notes            Note[]
+  attachments      Attachment[]
+  tags             BidTag[]
+
+  // Timestamps
+  createdAt        DateTime    @default(now())
+  updatedAt        DateTime    @updatedAt
+
+  @@index([clientCompanyId])
+  @@index([contactId])
+  @@index([ownerId])
+  @@index([bidStatus])
+}
+
+model Scope {
+  id     Int     @id @default(autoincrement())
+  name   String
+  cost   Float   @default(0)
+  // "Pending" | "Won" | "Lost" as plain string on SQLite
+  status String
+  bidId  Int
+  bid    Bid     @relation(fields: [bidId], references: [id])
+
+  @@index([bidId])
+  @@index([status])
+}
+
+model Note {
+  id        Int      @id @default(autoincrement())
+  text      String
+  bidId     Int
+  bid       Bid      @relation(fields: [bidId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@index([bidId])
+}
+
+model Attachment {
+  id           Int      @id @default(autoincrement())
+  bidId        Int
+  bid          Bid      @relation(fields: [bidId], references: [id])
+  originalName String
+  path         String
+  mimetype     String?
+  size         Int?
+  createdAt    DateTime @default(now())
+
+  @@index([bidId])
+}
+
+model Tag {
+  id    Int      @id @default(autoincrement())
+  name  String   @unique
+  bids  BidTag[]
+}
+
+model BidTag {
+  bidId Int
+  tagId Int
+  bid   Bid @relation(fields: [bidId], references: [id])
+  tag   Tag @relation(fields: [tagId], references: [id])
+
+  @@id([bidId, tagId])
+  @@index([tagId])
+}

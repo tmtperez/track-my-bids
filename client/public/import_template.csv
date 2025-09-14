@@ -1,0 +1,3 @@
+projectName,clientCompany,contactName,proposalDate,dueDate,jobLocation,leadSource,bidStatus,scopeName,scopeCost,scopeStatus
+Downtown Office Complex,MegaCorp,John Doe,2025-07-10,2025-07-25,Metropolis,Referral,Active,Foundation & Concrete,350000,Pending
+Downtown Office Complex,MegaCorp,John Doe,2025-07-10,2025-07-25,Metropolis,Referral,Active,Structural Steel,500000,Pending

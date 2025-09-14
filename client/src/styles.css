@@ -1,0 +1,132 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==== THEME VARS ==== */
+:root{
+  /* brand */
+  --brand-50:#eef6ff; --brand-100:#dbeeff; --brand-200:#bfdfff;
+  --brand-300:#93c5fd; --brand-400:#60a5fa; --brand-500:#3b82f6;
+  --brand-600:#2563eb; --brand-700:#1d4ed8; --brand-800:#1e40af; --brand-900:#1e3a8a;
+
+  /* neutrals */
+  --page-bg:#f7f9fc;
+  --card-bg:#ffffff;
+  --text:#0f172a;
+
+  --ring: 0 0 0 4px rgba(37,99,235,.15);
+  --shadow-card: 0 12px 32px rgba(2,6,23,.08);
+  --shadow-soft: 0 8px 24px rgba(2,6,23,.06);
+}
+
+/* Optional dark mode */
+.dark:root{
+  --page-bg:#0b1220;
+  --card-bg:#0f172a;
+  --text:#e5e7eb;
+}
+
+/* ==== LAYOUT / GLOBAL ==== */
+html, body, #root{ height:100% }
+body{ background:var(--page-bg); color:var(--text) }
+.container-7xl{ max-width:80rem }
+
+/* ==== CARDS ==== */
+.card{ @apply bg-white border border-slate-200 rounded-xl; background:var(--card-bg); box-shadow: var(--shadow-soft); }
+.card-hover{ @apply transition; }
+.card-hover:hover{ box-shadow: var(--shadow-card); }
+
+/* Stat card for dashboard */
+.stat{
+  @apply p-5 rounded-xl border;
+  background:var(--card-bg);
+  border-color:rgba(2,6,23,0.08);
+  box-shadow: var(--shadow-soft);
+}
+.stat-label{ @apply text-sm text-slate-500 }
+.stat-value{ @apply text-3xl font-semibold text-slate-900 tracking-tight }
+.dark .stat-value{ @apply text-slate-100 }
+
+/* Chart wrapper */
+.chart-card{ @apply p-5 rounded-xl border; background:var(--card-bg); border-color:rgba(2,6,23,0.08); box-shadow: var(--shadow-soft); }
+.chart-title{ @apply text-sm font-semibold text-slate-700 }
+
+/* ==== BUTTONS ==== */
+.btn{ @apply inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium transition; }
+.btn:focus-visible{ box-shadow: var(--ring); outline: none; }
+.btn-primary{
+  color:#fff; background:var(--brand-600);
+  box-shadow:0 8px 24px rgba(37,99,235,.25);
+}
+.btn-primary:hover{ background:var(--brand-700) }
+.btn-ghost{ @apply text-slate-700 hover:bg-slate-100 }
+.btn-secondary{ @apply bg-white text-slate-700 border border-slate-300 hover:bg-slate-50 }
+
+/* ==== FORMS ==== */
+.input, .select{ @apply w-full rounded-md border border-slate-300 px-3 py-2 text-sm bg-white }
+.input:focus, .select:focus{ @apply outline-none ring-2 ring-blue-200 border-blue-300 }
+.label{ @apply block text-xs font-medium text-slate-600 mb-1 }
+
+/* ==== BADGES ==== */
+.badge{ @apply inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium }
+.badge-yellow{ @apply bg-amber-100 text-amber-800 }
+.badge-green{ @apply bg-emerald-100 text-emerald-800 }
+.badge-red{ @apply bg-rose-100 text-rose-800 }
+.badge-blue{
+  background:var(--brand-100); color:var(--brand-700);
+  border:1px solid var(--brand-200);
+  @apply inline-flex items-center rounded-full px-2 py-0.5 text-[11px] font-medium;
+}
+
+/* ==== NAV ==== */
+.navlink{ @apply text-sm px-3 py-1 rounded-md text-slate-600 hover:bg-slate-100 hover:text-slate-900 }
+.navlink-active{ background:var(--brand-700); color:#fff }
+.topbar{
+  @apply sticky top-0 z-40;
+  background:rgba(255,255,255,.85);
+  backdrop-filter: blur(8px);
+}
+
+/* ==== TABLES ==== */
+.table{ @apply w-full text-sm }
+.table th{ @apply text-left py-2 px-3 text-slate-500 }
+.table td{ @apply py-2 px-3 }
+.table thead tr{ @apply border-b border-slate-200 }
+.table tbody tr:hover{ @apply bg-slate-50 }
+
+/* Legacy var (compat with any previous uses) */
+:root { --brand:#1d4ed8 }
+
+/* --- Tabs (for Active / Complete / Archived) --- */
+.tabs { @apply flex items-center gap-2; }
+.tab {
+  @apply px-3 py-1 text-sm rounded-md text-slate-600 border border-transparent transition;
+}
+.tab:hover { @apply bg-slate-100 text-slate-900; }
+.tab-active {
+  @apply bg-brand-700 text-white shadow-soft;
+}
+
+/* --- Subtle button for header tools like “Import Bids” --- */
+.btn-ghost {
+  @apply inline-flex items-center justify-center px-3 py-2 rounded-lg text-sm font-medium;
+  background: transparent;
+  border: 1px solid transparent;
+  color: rgb(51 65 85);                 /* slate-700 */
+}
+.btn-ghost:hover { @apply bg-slate-100; }
+
+/* --- Inline links inside tables (Details / Edit) --- */
+.link {
+  @apply text-brand-700 hover:text-brand-800 underline underline-offset-2 decoration-slate-300;
+}
+
+/* If those actions are buttons, strip button chrome so they act like links */
+.btn-link {
+  all: unset;               /* remove native button styles */
+  cursor: pointer;
+  @apply text-brand-700 hover:text-brand-800 underline underline-offset-2 decoration-slate-300;
+}
+
+/* Optional: style ALL links in tables consistently */
+.table a { @apply text-brand-700 hover:text-brand-800 underline underline-offset-2 decoration-slate-300; }
