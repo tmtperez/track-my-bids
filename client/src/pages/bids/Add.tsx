@@ -13,10 +13,64 @@ type BidForm = {
   contactId: number | ''         // '' until selected
   proposalDate: string           // ''
   dueDate: string                // ''
+  followUpOn: string             // ''  (NEW)
   jobLocation: string
   leadSource: string
-  bidStatus: 'Active' | 'Complete' | 'Archived'
+  bidStatus: 'Active' | 'Complete' | 'Archived' | 'Hot' | 'Cold'
   scopes: ScopeInput[]
+}
+
+// ---------- Scope Catalog (defaults + local persistence) ----------
+const SCOPE_LS_KEY = 'scopeCatalog.v1'
+const DEFAULT_SCOPES = [
+  'Architectural Aluminum',
+  'Canopies',
+  'Awnings',
+  'Pergola',
+  'Trellis',
+  'Arbor',
+  'Shutters',
+  'Cabana',
+  'String Light Poles',
+  'Pool LSE',
+  'Balcony Rail',
+  'Screen',
+  'Perimeter Fence',
+  'Retaining Wall Rail',
+  'ADA Rail',
+  'Pool Fence',
+  'Dog Park Fence',
+  'Wood Fence',
+  'Welded Wire Fence',
+  'Cable Rail',
+  'Pedestrian Gates',
+  'Breezeway Gates',
+  'Entry Gates',
+  'Compactor Gates',
+  'Compactor Rail',
+  'Pool Gates',
+  'Dog Park Gates',
+  'Glass Fence',
+  'Glass Gates',
+  'Chain Link Fence',
+  'PVC Fence',
+] as const
+
+function loadScopeCatalog(): string[] {
+  try {
+    const raw = localStorage.getItem(SCOPE_LS_KEY)
+    const saved: string[] = raw ? JSON.parse(raw) : []
+    const merged = Array.from(new Set([...DEFAULT_SCOPES, ...saved]))
+    return merged.sort((a, b) => a.localeCompare(b))
+  } catch {
+    return [...DEFAULT_SCOPES].sort((a, b) => a.localeCompare(b))
+  }
+}
+
+function saveScopeCatalog(catalog: string[]) {
+  // persist only non-default additions
+  const extras = catalog.filter(s => !(DEFAULT_SCOPES as readonly string[]).includes(s))
+  localStorage.setItem(SCOPE_LS_KEY, JSON.stringify(extras))
 }
 
 // Small helper: currency (optional, used for total)
@@ -65,6 +119,135 @@ function ComboSelect<T extends { id: number; name: string }>(props: {
   )
 }
 
+// ---------- Scope Name Combobox (type-ahead with “add if missing”) ----------
+function ScopeNameCombo(props: {
+  value: string
+  onChange: (val: string) => void
+  onCommitNew?: (val: string) => void
+  catalog: string[]
+}) {
+  const { value, onChange, onCommitNew, catalog } = props
+  const [open, setOpen] = React.useState(false)
+  const [query, setQuery] = React.useState(value ?? '')
+  const [activeIdx, setActiveIdx] = React.useState<number>(-1)
+  const containerRef = React.useRef<HTMLDivElement>(null)
+
+  React.useEffect(() => setQuery(value ?? ''), [value])
+
+  const options = React.useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return catalog
+    return catalog.filter(s => s.toLowerCase().includes(q))
+  }, [query, catalog])
+
+  const exists = React.useMemo(
+    () => catalog.some(s => s.toLowerCase() === query.trim().toLowerCase()),
+    [catalog, query]
+  )
+
+  function choose(val: string) {
+    onChange(val)
+    setQuery(val)
+    setOpen(false)
+  }
+
+  // Close on outside click
+  React.useEffect(() => {
+    function onDoc(e: MouseEvent) {
+      if (!containerRef.current) return
+      if (!containerRef.current.contains(e.target as Node)) setOpen(false)
+    }
+    document.addEventListener('mousedown', onDoc)
+    return () => document.removeEventListener('mousedown', onDoc)
+  }, [])
+
+  return (
+    <div ref={containerRef} className="relative">
+      <input
+        className="input w-full"
+        placeholder="Scope Name"
+        value={query}
+        onFocus={() => setOpen(true)}
+        onChange={e => {
+          setQuery(e.target.value)
+          setOpen(true)
+        }}
+        onKeyDown={(e) => {
+          if (e.key === 'ArrowDown') {
+            e.preventDefault()
+            setOpen(true)
+            setActiveIdx(i => Math.min(i + 1, options.length - 1))
+          } else if (e.key === 'ArrowUp') {
+            e.preventDefault()
+            setActiveIdx(i => Math.max(i - 1, -1))
+          } else if (e.key === 'Enter') {
+            e.preventDefault()
+            if (open) {
+              if (activeIdx >= 0 && activeIdx < options.length) {
+                choose(options[activeIdx])
+              } else {
+                const val = query.trim()
+                if (!val) return
+                onChange(val)
+                if (!exists && onCommitNew) onCommitNew(val)
+                setOpen(false)
+              }
+            } else {
+              const val = query.trim()
+              if (!val) return
+              onChange(val)
+              if (!exists && onCommitNew) onCommitNew(val)
+            }
+          } else if (e.key === 'Escape') {
+            setOpen(false)
+          }
+        }}
+        onBlur={() => {
+          const val = query.trim()
+          if (!val) return
+          onChange(val)
+          if (!exists && onCommitNew) onCommitNew(val)
+        }}
+      />
+      {open && (
+        <div className="absolute z-20 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-200 bg-white shadow">
+          {options.length > 0 ? (
+            options.map((opt, idx) => (
+              <div
+                key={opt}
+                className={`cursor-pointer px-3 py-2 text-sm hover:bg-slate-50 ${idx === activeIdx ? 'bg-slate-50' : ''}`}
+                onMouseEnter={() => setActiveIdx(idx)}
+                onMouseDown={(e) => {
+                  e.preventDefault()
+                  choose(opt)
+                }}
+              >
+                {opt}
+              </div>
+            ))
+          ) : (
+            <div className="px-3 py-2 text-sm text-slate-500">No matches</div>
+          )}
+          {!exists && query.trim() && (
+            <div
+              className="border-t px-3 py-2 text-sm text-emerald-700 cursor-pointer hover:bg-emerald-50"
+              onMouseDown={(e) => {
+                e.preventDefault()
+                const val = query.trim()
+                onChange(val)
+                onCommitNew?.(val)
+                setOpen(false)
+              }}
+            >
+              + Add “{query.trim()}”
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function AddBid() {
   const navigate = useNavigate()
 
@@ -74,12 +257,16 @@ export default function AddBid() {
   const [saving, setSaving]   = React.useState(false)
   const [error, setError]     = React.useState<string | null>(null)
 
+  // scope catalog state
+  const [scopeCatalog, setScopeCatalog] = React.useState<string[]>(() => loadScopeCatalog())
+
   const [form, setForm] = React.useState<BidForm>({
     projectName: '',
     clientCompanyId: '',
     contactId: '',
     proposalDate: '',
     dueDate: '',
+    followUpOn: '',
     jobLocation: '',
     leadSource: '',
     bidStatus: 'Active',
@@ -118,6 +305,17 @@ export default function AddBid() {
     setForm(f => ({ ...f, scopes: f.scopes.filter((_, idx) => idx !== i) }))
   }
 
+  function addToCatalogIfMissing(name: string) {
+    const val = name.trim()
+    if (!val) return
+    if (scopeCatalog.some(s => s.toLowerCase() === val.toLowerCase())) return
+    setScopeCatalog(prev => {
+      const next = [...prev, val].sort((a, b) => a.localeCompare(b))
+      saveScopeCatalog(next)
+      return next
+    })
+  }
+
   // Filter contacts by selected company if one is chosen
   const visibleContacts = React.useMemo(() => {
     if (!form.clientCompanyId) return contacts
@@ -133,10 +331,11 @@ export default function AddBid() {
     try {
       const payload = {
         projectName: form.projectName.trim(),
-        clientCompanyId: Number(form.clientCompanyId),               // must be number
-        contactId: form.contactId ? Number(form.contactId) : null,   // null or number
+        clientCompanyId: Number(form.clientCompanyId),
+        contactId: form.contactId ? Number(form.contactId) : null,
         proposalDate: form.proposalDate || null,
         dueDate: form.dueDate || null,
+        followUpOn: form.followUpOn || null,
         jobLocation: form.jobLocation || null,
         leadSource: form.leadSource || null,
         bidStatus: form.bidStatus,
@@ -182,7 +381,6 @@ export default function AddBid() {
             value={form.clientCompanyId}
             options={companies}
             onChange={(v) => {
-              // if company changes and existing contact doesn't belong, clear contact
               setField('clientCompanyId', v)
               setField('contactId', '')
             }}
@@ -200,7 +398,7 @@ export default function AddBid() {
           />
         </div>
 
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
           <div>
             <label className="label">Proposal Date</label>
             <input
@@ -217,6 +415,15 @@ export default function AddBid() {
               type="date"
               value={form.dueDate}
               onChange={e => setField('dueDate', e.target.value)}
+            />
+          </div>
+          <div>
+            <label className="label">Follow-up In</label>
+            <input
+              className="input"
+              type="date"
+              value={form.followUpOn}
+              onChange={e => setField('followUpOn', e.target.value)}
             />
           </div>
         </div>
@@ -248,6 +455,8 @@ export default function AddBid() {
             onChange={e => setField('bidStatus', e.target.value as BidForm['bidStatus'])}
           >
             <option>Active</option>
+            <option>Hot</option>
+            <option>Cold</option>
             <option>Complete</option>
             <option>Archived</option>
           </select>
@@ -258,12 +467,14 @@ export default function AddBid() {
           <div className="mb-2 font-medium">Scope Breakdown</div>
           {form.scopes.map((s, i) => (
             <div key={i} className="mb-2 grid grid-cols-12 items-center gap-2">
-              <input
-                className="input col-span-5 md:col-span-5"
-                placeholder="Scope Name"
-                value={s.name}
-                onChange={e => setScope(i, 'name', e.target.value)}
-              />
+              <div className="col-span-5 md:col-span-5">
+                <ScopeNameCombo
+                  value={s.name}
+                  catalog={scopeCatalog}
+                  onChange={(val) => setScope(i, 'name', val)}
+                  onCommitNew={(val) => addToCatalogIfMissing(val)}
+                />
+              </div>
               <input
                 className="input col-span-3 md:col-span-3"
                 type="number"

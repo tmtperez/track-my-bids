@@ -4,6 +4,7 @@ import { getJSON, postJSON, putJSON } from '../../lib/api'
 type Contact = {
   id: number
   name: string
+  title?: string | null
   email?: string
   phone?: string
   company: { id: number; name: string }
@@ -46,6 +47,7 @@ export default function Contacts() {
     if (!editing) return
     await putJSON(`/contacts/${editing.id}`, {
       name: editing.name,
+      title: editing.title ?? null,
       email: editing.email,
       phone: editing.phone,
       companyId: editing.company.id,
@@ -93,6 +95,7 @@ export default function Contacts() {
           <thead className="bg-slate-50">
             <tr>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">CONTACT NAME</th>
+              <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">TITLE</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">COMPANY</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">EMAIL</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">PHONE</th>
@@ -103,6 +106,7 @@ export default function Contacts() {
             {contacts.map(c => (
               <tr key={c.id} className="border-t hover:bg-slate-50/60">
                 <td className="font-medium text-slate-800">{c.name}</td>
+                <td className="text-slate-700">{c.title || '—'}</td>
                 <td>{c.company.name}</td>
                 <td className="text-slate-600">{c.email || '—'}</td>
                 <td className="text-slate-600">{c.phone || '—'}</td>
@@ -118,7 +122,7 @@ export default function Contacts() {
             ))}
             {contacts.length === 0 && (
               <tr>
-                <td colSpan={5} className="py-10 text-center text-slate-500">
+                <td colSpan={6} className="py-10 text-center text-slate-500">
                   No contacts yet.
                 </td>
               </tr>
@@ -148,6 +152,15 @@ export default function Contacts() {
                 className="input"
                 value={editing.name}
                 onChange={e => setEditing({ ...editing, name: e.target.value })}
+              />
+            </div>
+            <div>
+              <label className="label">Title</label>
+              <input
+                className="input"
+                placeholder="CEO, PM, Estimator…"
+                value={editing.title ?? ''}
+                onChange={e => setEditing({ ...editing, title: e.target.value })}
               />
             </div>
             <div>
@@ -236,6 +249,7 @@ function AddContactCard({
 }) {
   const [form, setForm] = React.useState<any>({
     name: '',
+    title: '',
     companyId: '',
     email: '',
     phone: '',
@@ -255,6 +269,17 @@ function AddContactCard({
             className="input"
             value={form.name}
             onChange={e => setForm((f: any) => ({ ...f, name: e.target.value }))}
+          />
+        </div>
+        <div>
+          <label className="label">Title</label>
+          <input
+            className="input"
+            placeholder="CEO, PM, Estimator…"
+            value={form.title}
+            onChange={e =>
+              setForm((f: any) => ({ ...f, title: e.target.value }))
+            }
           />
         </div>
         <div>
@@ -305,7 +330,13 @@ function AddContactCard({
         </button>
         <button
           className={`${btn} bg-emerald-600 text-white hover:bg-emerald-700 focus:ring-emerald-300 px-4 py-2 shadow`}
-          onClick={() => onSave({ ...form, companyId: Number(form.companyId) })}
+          onClick={() =>
+            onSave({
+              ...form,
+              companyId: Number(form.companyId) || undefined,
+              title: form.title || null,
+            })
+          }
         >
           Add Contact
         </button>

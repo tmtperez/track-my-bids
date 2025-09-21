@@ -10,8 +10,9 @@ type Row = {
   amount: number
   proposalDate?: string | null
   dueDate?: string | null
+  followUpOn?: string | null
   scopeStatus: 'Pending' | 'Won' | 'Lost' | 'Unknown'
-  bidStatus: 'Active' | 'Complete' | 'Archived'
+  bidStatus: 'Active' | 'Complete' | 'Archived' | 'Hot' | 'Cold'
 }
 
 function currency(n: number) {
@@ -46,7 +47,9 @@ type SortDir = 'asc' | 'desc'
 export default function Bids() {
   const auth = React.useContext(AuthContext)
 
-  const [tab, setTab] = React.useState<'Active' | 'Complete' | 'Archived'>('Active')
+  const [tab, setTab] = React.useState<
+    'Active' | 'Complete' | 'Archived' | 'Hot' | 'Cold'
+  >('Active')
   const [rows, setRows] = React.useState<Row[]>([])
   const [search, setSearch] = React.useState('')
 
@@ -54,7 +57,7 @@ export default function Bids() {
   const [from, setFrom] = React.useState<string>('')
   const [to, setTo] = React.useState<string>('')
 
-  // NEW: due-in filter and sorting controls
+  // due-in filter and sorting controls
   const [dueInMax, setDueInMax] = React.useState<string>('') // user types a number; we treat as "≤ X"
   const [sortBy, setSortBy] = React.useState<SortBy>('dueDate')
   const [sortDir, setSortDir] = React.useState<SortDir>('asc')
@@ -162,7 +165,7 @@ export default function Bids() {
           Clear
         </button>
 
-        {/* NEW: Due-in filter */}
+        {/* Due-in filter */}
         <div className="ml-4 flex items-center gap-2">
           <span className="text-sm text-slate-600">Due in ≤</span>
           <input
@@ -176,7 +179,7 @@ export default function Bids() {
           <span className="text-sm text-slate-600">days</span>
         </div>
 
-        {/* NEW: Sorting controls */}
+        {/* Sorting controls */}
         <div className="ml-auto flex items-center gap-2">
           <span className="text-sm text-slate-600">Sort by:</span>
           <select
@@ -201,7 +204,7 @@ export default function Bids() {
 
       {/* Status Tabs */}
       <div className="flex gap-2">
-        {(['Active', 'Complete', 'Archived'] as const).map((s) => {
+        {(['Active', 'Complete', 'Archived', 'Hot', 'Cold'] as const).map((s) => {
           const active = tab === s
           return (
             <button
@@ -225,15 +228,10 @@ export default function Bids() {
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">PROJECT NAME</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">CLIENT</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">AMOUNT</th>
-
-              {/* NEW */}
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">PROPOSAL DATE</th>
-
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">DUE DATE</th>
-
-              {/* NEW */}
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">DUE IN</th>
-
+              <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">FOLLOW-UP IN</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">SCOPE STATUS</th>
               <th className="px-4 py-3 text-left text-base font-bold uppercase tracking-wider text-slate-600">ACTIONS</th>
             </tr>
@@ -244,20 +242,15 @@ export default function Bids() {
                 <td className="font-medium">{r.projectName}</td>
                 <td>{r.clientName}</td>
                 <td>{currency(r.amount)}</td>
-
-                {/* NEW */}
                 <td>{fmt(r.proposalDate)}</td>
-
                 <td className="text-red-600">{fmt(r.dueDate)}</td>
-
-                {/* NEW */}
                 <td>
                   {(() => {
                     const n = daysBetween(r.proposalDate ?? null, r.dueDate ?? null)
                     return typeof n === 'number' ? `${n} day${n === 1 ? '' : 's'}` : '—'
                   })()}
                 </td>
-
+                <td>{fmt(r.followUpOn)}</td>
                 <td>
                   <span
                     className={
@@ -297,7 +290,7 @@ export default function Bids() {
             ))}
             {viewRows.length === 0 && (
               <tr>
-                <td colSpan={8} className="py-12 text-center text-slate-500">
+                <td colSpan={9} className="py-12 text-center text-slate-500">
                   No bids found.
                 </td>
               </tr>

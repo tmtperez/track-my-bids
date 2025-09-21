@@ -17,9 +17,10 @@ type Bid = {
   contact?: Contact | null
   proposalDate?: string | null
   dueDate?: string | null
+  followUpOn?: string | null
   jobLocation?: string | null
   leadSource?: string | null
-  bidStatus: 'Active' | 'Complete' | 'Archived'
+  bidStatus: 'Active' | 'Complete' | 'Archived' | 'Hot' | 'Cold'
   scopes: Scope[]
 }
 
@@ -148,6 +149,13 @@ export default function BidDetails() {
               DUE DATE
             </div>
             <div className="text-rose-600">{dateFmt(bid.dueDate)}</div>
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-xs font-semibold tracking-widest text-slate-500">
+              FOLLOW-UP IN
+            </div>
+            <div className="text-slate-900">{dateFmt(bid.followUpOn)}</div>
           </div>
 
           <div className="space-y-1">

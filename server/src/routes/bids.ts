@@ -47,21 +47,17 @@ function redactForViewer<T extends Record<string, any>>(req: any, rows: T[]) {
   if (req.user?.role !== 'VIEWER') return rows
   return rows.map(row => ({
     ...row,
-    amount: null,            // hide computed total
-    scopes: undefined,       // if returned, hide scopes entirely
+    amount: null,
+    scopes: undefined,
   }))
 }
 
 // ---------------------------------------------------------------------------
-// List bids (supports: status tab, free-text search, createdAt range)
-// Query params:
-//   - status=Active|Complete|Archived
-//   - search=string   (matches projectName, client company name, or contact name)
+// List bids (status/search/date-range)
+//   - status=Active|Complete|Archived|Hot|Cold
+//   - search=string
 //   - createdFrom=YYYY-MM-DD
 //   - createdTo=YYYY-MM-DD
-// ---------------------------------------------------------------------------
-// ---------------------------------------------------------------------------
-// List bids (status/search/date-range)
 // ---------------------------------------------------------------------------
 bids.get('/', requirePerm('read'), async (req, res, next) => {
   try {
@@ -89,7 +85,13 @@ bids.get('/', requirePerm('read'), async (req, res, next) => {
 
     const results = await prisma.bid.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        projectName: true,
+        proposalDate: true,
+        dueDate: true,
+        followUpOn: true,
+        bidStatus: true,
         clientCompany: true,
         contact: true,
         scopes: true,
@@ -102,8 +104,9 @@ bids.get('/', requirePerm('read'), async (req, res, next) => {
       projectName: b.projectName,
       clientName: b.clientCompany?.name ?? '—',
       amount: totalAmount(b.scopes),
-      proposalDate: b.proposalDate ?? null,   // <-- add this
+      proposalDate: b.proposalDate ?? null,
       dueDate: b.dueDate ?? null,
+      followUpOn: b.followUpOn ?? null,     // NEW
       scopeStatus: aggregateScopeStatus(b.scopes),
       bidStatus: b.bidStatus,
     }))
@@ -114,7 +117,6 @@ bids.get('/', requirePerm('read'), async (req, res, next) => {
     next(err)
   }
 })
-
 
 // ---------------------------------------------------------------------------
 // Get one bid with full details
@@ -138,7 +140,6 @@ bids.get('/:id', requirePerm('read'), async (req, res, next) => {
 
     if (!b) return res.status(404).json({ error: 'Not found' })
 
-    // Redact costs for Viewer
     if (req.user?.role === 'VIEWER') {
       const redacted = {
         ...b,
@@ -156,8 +157,7 @@ bids.get('/:id', requirePerm('read'), async (req, res, next) => {
 // ---------------------------------------------------------------------------
 // Create a bid
 // ---------------------------------------------------------------------------
-// CREATE (only ADMIN/MANAGER/ESTIMATOR)
-bids.post('/', async (req, res, next) => {
+bids.post('/', requireRole('ADMIN','MANAGER','ESTIMATOR'), async (req, res, next) => {
   try {
     const bid = await prisma.bid.create({
       data: {
@@ -166,9 +166,10 @@ bids.post('/', async (req, res, next) => {
         contactId: req.body.contactId ?? null,
         proposalDate: req.body.proposalDate ? new Date(req.body.proposalDate) : null,
         dueDate: req.body.dueDate ? new Date(req.body.dueDate) : null,
+        followUpOn: req.body.followUpOn ? new Date(req.body.followUpOn) : null, // NEW
         jobLocation: req.body.jobLocation ?? null,
         leadSource: req.body.leadSource ?? null,
-        bidStatus: req.body.bidStatus,
+        bidStatus: req.body.bidStatus, // allow 'Hot' | 'Cold'
         scopes: {
           create: (req.body.scopes || []).map((s: any) => ({
             name: s.name,
@@ -188,39 +189,43 @@ bids.post('/', async (req, res, next) => {
 // ---------------------------------------------------------------------------
 // Update a bid (replaces scopes for simplicity)
 // ---------------------------------------------------------------------------
-// UPDATE (row-level + role)
 bids.put(
   '/:id',
-  canAccessBid,                      // must be able to see it
+  canAccessBid,
   requireRole('ADMIN','MANAGER','ESTIMATOR'),
-  async (req, res) => {
-    const id = Number(req.params.id);
-    const data = req.body as BidInput;
+  async (req, res, next) => {
+    try {
+      const id = Number(req.params.id);
+      const data = req.body as BidInput;
 
-    await prisma.scope.deleteMany({ where: { bidId: id } });
+      await prisma.scope.deleteMany({ where: { bidId: id } });
 
-    const updated = await prisma.bid.update({
-      where: { id },
-      data: {
-        projectName: data.projectName,
-        clientCompanyId: data.clientCompanyId,
-        contactId: data.contactId || null,
-        proposalDate: data.proposalDate ? new Date(data.proposalDate) : null,
-        dueDate: data.dueDate ? new Date(data.dueDate) : null,
-        jobLocation: data.jobLocation || null,
-        leadSource: data.leadSource || null,
-        bidStatus: data.bidStatus,
-        scopes: {
-          create: data.scopes.map(s => ({
-            name: s.name,
-            cost: s.cost,
-            status: s.status,
-          })),
+      const updated = await prisma.bid.update({
+        where: { id },
+        data: {
+          projectName: data.projectName,
+          clientCompanyId: data.clientCompanyId,
+          contactId: data.contactId || null,
+          proposalDate: data.proposalDate ? new Date(data.proposalDate) : null,
+          dueDate: data.dueDate ? new Date(data.dueDate) : null,
+          followUpOn: data.followUpOn ? new Date(data.followUpOn) : null, // NEW
+          jobLocation: data.jobLocation || null,
+          leadSource: data.leadSource || null,
+          bidStatus: data.bidStatus,
+          scopes: {
+            create: data.scopes.map(s => ({
+              name: s.name,
+              cost: s.cost,
+              status: s.status,
+            })),
+          },
         },
-      },
-      include: { scopes: true },
-    });
+        include: { scopes: true },
+      });
 
-    res.json(updated);
+      res.json(updated);
+    } catch (e) {
+      next(e)
+    }
   }
 );

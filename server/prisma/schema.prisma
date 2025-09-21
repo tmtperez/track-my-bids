@@ -12,17 +12,17 @@ generator client {
 
 // ---------- Auth / Users (no Prisma enums on SQLite) ----------
 model User {
-  id        Int      @id @default(autoincrement())
-  email     String   @unique
-  name      String?
+  id           Int      @id @default(autoincrement())
+  email        String   @unique
+  name         String?
   /// Allowed values in your app code: "ADMIN" | "MANAGER" | "ESTIMATOR" | "VIEWER"
-  role      String    // 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
+  role         String    // 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
   passwordHash String?   // optional if you want to store hashed passwords
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
   // Bids where this user is the owner
-  bidsOwned Bid[]    @relation("BidOwner")
+  bidsOwned Bid[] @relation("BidOwner")
 }
 
 // ---------- Core models ----------
@@ -39,14 +39,15 @@ model Company {
 model Contact {
   id        Int      @id @default(autoincrement())
   name      String
+  title     String?           // <-- NEW
   email     String?
   phone     String?
   companyId Int
   company   Company  @relation(fields: [companyId], references: [id])
 
-  // Link back to bids (contact on a bid)
   bids      Bid[]    @relation("BidContact")
 }
+
 
 model Bid {
   id               Int         @id @default(autoincrement())
@@ -66,10 +67,11 @@ model Bid {
   // Meta
   proposalDate     DateTime?
   dueDate          DateTime?
+  followUpOn       DateTime?   // NEW: date for “Follow-up in”
   jobLocation      String?
   leadSource       String?
 
-  // Tabs: "Active" | "Complete" | "Archived" (keep as String on SQLite)
+  // Tabs/status: keep as String on SQLite (app will use: Active | Complete | Archived | Hot | Cold)
   bidStatus        String
   archived         Boolean     @default(false)
 
@@ -87,6 +89,7 @@ model Bid {
   @@index([contactId])
   @@index([ownerId])
   @@index([bidStatus])
+  @@index([followUpOn]) // helpful for follow-up views
 }
 
 model Scope {

@@ -12,6 +12,7 @@ contacts.get('/', async (_req, res) => {
     list.map(c => ({
       id: c.id,
       name: c.name,
+      title: c.title ?? null,
       email: c.email,
       phone: c.phone,
       company: { id: c.company.id, name: c.company.name }
@@ -20,19 +21,31 @@ contacts.get('/', async (_req, res) => {
 })
 
 contacts.post('/', async (req, res) => {
-  const { name, email, phone, companyId } = req.body
+  const { name, title, email, phone, companyId } = req.body
   const created = await prisma.contact.create({
-    data: { name, email, phone, companyId: Number(companyId) }
+    data: {
+      name,
+      title: title ?? null,
+      email,
+      phone,
+      companyId: Number(companyId)
+    }
   })
   res.json(created)
 })
 
 contacts.put('/:id', async (req, res) => {
   const id = Number(req.params.id)
-  const { name, email, phone, companyId } = req.body
+  const { name, title, email, phone, companyId } = req.body
   const updated = await prisma.contact.update({
     where: { id },
-    data: { name, email, phone, companyId: Number(companyId) }
+    data: {
+      name,
+      title: title ?? null,
+      email,
+      phone,
+      companyId: Number(companyId)
+    }
   })
   res.json(updated)
 })
