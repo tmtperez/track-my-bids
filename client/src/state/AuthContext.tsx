@@ -4,7 +4,7 @@ import { postJSON, setAuthToken } from '../lib/api'
 export type User = {
   id: number
   name: string
-  role: 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
+  role: 'ADMIN' | 'MANAGER' | 'USER'
 }
 
 type AuthCtx = {

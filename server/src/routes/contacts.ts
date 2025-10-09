@@ -49,3 +49,26 @@ contacts.put('/:id', async (req, res) => {
   })
   res.json(updated)
 })
+
+// DELETE contact
+contacts.delete('/:id', async (req, res) => {
+  const id = Number(req.params.id)
+
+  try {
+    // Check if contact is used in any bids
+    const bidsCount = await prisma.bid.count({ where: { contactId: id } })
+    if (bidsCount > 0) {
+      return res.status(400).json({
+        error: `Cannot delete contact with ${bidsCount} associated bids. Remove contact from bids first.`
+      })
+    }
+
+    await prisma.contact.delete({ where: { id } })
+    res.json({ ok: true })
+  } catch (error: any) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ error: 'Contact not found' })
+    }
+    return res.status(400).json({ error: error.message || 'Failed to delete contact' })
+  }
+})

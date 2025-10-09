@@ -2,7 +2,7 @@
 
 // ---------- Datasource & generator ----------
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -10,42 +10,83 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// ---------- Auth / Users (no Prisma enums on SQLite) ----------
+// === NEW ===
+enum Role {
+  ADMIN
+  MANAGER
+  ESTIMATOR
+  USER
+}
+
+// ---------- Auth / Users ----------
 model User {
-  id           Int      @id @default(autoincrement())
-  email        String   @unique
+  id           Int       @id @default(autoincrement())
+  email        String    @unique
   name         String?
-  /// Allowed values in your app code: "ADMIN" | "MANAGER" | "ESTIMATOR" | "VIEWER"
-  role         String    // 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
-  passwordHash String?   // optional if you want to store hashed passwords
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  /// Allowed values in app code: "ADMIN" | "MANAGER" | "USER"
+  role         String    @default("USER")   // store as text
+  passwordHash String?
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
 
   // Bids where this user is the owner
-  bidsOwned Bid[] @relation("BidOwner")
+  bidsOwned          Bid[]     @relation("BidOwner")
+  bidsLastModified   Bid[]     @relation("BidLastModifiedBy")
+  bidsEstimating     Bid[]     @relation("BidEstimator")
+  companiesManaged   Company[] @relation("CompanyAccountManager")
 }
 
 // ---------- Core models ----------
 model Company {
   id        Int       @id @default(autoincrement())
   name      String
+
+  // Contact Information (1)
+  website   String?
+  address   String?
+  city      String?
+  state     String?
+  zip       String?
+
+  // Relationship Tracking (3)
+  accountManagerId   Int?
+  accountManager     User?      @relation("CompanyAccountManager", fields: [accountManagerId], references: [id])
+  relationshipStatus String?    // "active" | "inactive" | "prospect"
+  customerSince      DateTime?
+  lastContactDate    DateTime?
+  nextFollowUpDate   DateTime?
+
+  // Additional Features (5)
+  notes              String?    // General notes/description
+
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 
-  contacts  Contact[]
-  bids      Bid[]
+  contacts           Contact[]
+  bids               Bid[]
+  companyTags        CompanyTag[]
+  companyAttachments CompanyAttachment[]
+  activityLogs       CompanyActivityLog[]
+
+  @@index([accountManagerId])
+  @@index([relationshipStatus])
+  @@index([nextFollowUpDate])
 }
 
 model Contact {
   id        Int      @id @default(autoincrement())
   name      String
-  title     String?           // <-- NEW
+  title     String?
   email     String?
   phone     String?
+  isPrimary Boolean  @default(false)  // Mark primary contact
   companyId Int
   company   Company  @relation(fields: [companyId], references: [id])
 
   bids      Bid[]    @relation("BidContact")
+
+  @@index([companyId])
+  @@index([isPrimary])
 }
 
 
@@ -64,16 +105,25 @@ model Bid {
   ownerId          Int?
   owner            User?       @relation("BidOwner", fields: [ownerId], references: [id])
 
+  // Estimator assignment
+  estimatorId      Int?
+  estimator        User?       @relation("BidEstimator", fields: [estimatorId], references: [id])
+
   // Meta
   proposalDate     DateTime?
   dueDate          DateTime?
-  followUpOn       DateTime?   // NEW: date for “Follow-up in”
+  followUpOn       DateTime?   // NEW: date for "Follow-up in"
   jobLocation      String?
   leadSource       String?
 
   // Tabs/status: keep as String on SQLite (app will use: Active | Complete | Archived | Hot | Cold)
   bidStatus        String
   archived         Boolean     @default(false)
+
+  // Audit tracking
+  lastModifiedById Int?
+  lastModifiedBy   User?       @relation("BidLastModifiedBy", fields: [lastModifiedById], references: [id])
+  lastModifiedAt   DateTime?
 
   // Relations
   scopes           Scope[]
@@ -88,6 +138,7 @@ model Bid {
   @@index([clientCompanyId])
   @@index([contactId])
   @@index([ownerId])
+  @@index([estimatorId])
   @@index([bidStatus])
   @@index([followUpOn]) // helpful for follow-up views
 }
@@ -142,4 +193,52 @@ model BidTag {
 
   @@id([bidId, tagId])
   @@index([tagId])
+}
+
+model ScopeCatalog {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  defaultCost Int?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+// ---------- Company-specific models ----------
+model CompanyTag {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  tagName   String
+  createdAt DateTime @default(now())
+
+  @@index([companyId])
+  @@index([tagName])
+}
+
+model CompanyAttachment {
+  id           Int      @id @default(autoincrement())
+  companyId    Int
+  company      Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  originalName String
+  path         String
+  mimetype     String?
+  size         Int?
+  uploadedBy   String?  // user email or name
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+}
+
+model CompanyActivityLog {
+  id        Int      @id @default(autoincrement())
+  companyId Int
+  company   Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  activityType String // "note" | "call" | "meeting" | "email" | "update"
+  description  String
+  performedBy  String? // user email or name
+  createdAt    DateTime @default(now())
+
+  @@index([companyId])
+  @@index([activityType])
+  @@index([createdAt])
 }
