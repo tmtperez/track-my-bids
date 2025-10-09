@@ -19,8 +19,20 @@ import { requireRole } from './middleware/requireRole.js'
 
 const ORIGIN = process.env.CORS_ORIGIN || 'http://localhost:5173'
 
+// Support multiple origins (comma-separated in env)
+const allowedOrigins = ORIGIN.split(',').map(o => o.trim())
+
 const corsOptions: cors.CorsOptions = {
-  origin: ORIGIN,
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl)
+    if (!origin) return callback(null, true)
+
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true)
+    } else {
+      callback(new Error('Not allowed by CORS'))
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
