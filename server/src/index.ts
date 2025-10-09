@@ -1,5 +1,5 @@
 import { createApp } from './app.js'
-import { scheduleFollowUps } from './jobs/followups'   // 👈 import here
+import { scheduleFollowUps } from './jobs/followups.js'   // 👈 import here
 
 const port = Number(process.env.PORT || 4000)
 const app = createApp()

@@ -1,6 +1,6 @@
 import cron from 'node-cron'
 import { PrismaClient } from '@prisma/client'
-import { sendEmail } from '../utils/gmail'
+import { sendEmail } from '../utils/gmail.js'
 
 const prisma = new PrismaClient()
 

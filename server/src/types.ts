@@ -3,6 +3,7 @@ export type BidInput = {
   projectName: string
   clientCompanyId?: number
   contactId?: number | null
+  estimatorId?: number | null
   proposalDate?: string | null
   dueDate?: string | null
   followUpOn?: string | null        // NEW

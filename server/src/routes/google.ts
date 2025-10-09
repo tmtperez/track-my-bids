@@ -1,6 +1,6 @@
 import { Router } from 'express'
-import { getAuthUrl, saveTokensFromCode, sendEmail } from '../utils/gmail'
-import { runFollowUpsNow } from '../jobs/followups'
+import { getAuthUrl, saveTokensFromCode, sendEmail } from '../utils/gmail.js'
+import { runFollowUpsNow } from '../jobs/followups.js'
 
 const r = Router()
 

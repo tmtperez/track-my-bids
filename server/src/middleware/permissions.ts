@@ -2,7 +2,7 @@
 import type { Request, Response, NextFunction } from 'express'
 import { prisma } from '../db.js'
 
-type Role = 'ADMIN' | 'MANAGER' | 'ESTIMATOR' | 'VIEWER'
+type Role = 'ADMIN' | 'MANAGER' | 'USER'
 
 /**
  * Gate by role list. Returns 403 if req.user.role not included.
@@ -18,21 +18,16 @@ export function requireRole(...roles: Role[]) {
 
 /**
  * writeAccess:
- * For create/update/delete endpoints where only ADMIN & ESTIMATOR should pass.
- * (Viewer is read-only; Manager optional — keep out to match your policy.)
+ * For create/update/delete endpoints where ADMIN, MANAGER, and USER can write.
  */
-export const writeAccess = requireRole('ADMIN', 'ESTIMATOR')
+export const writeAccess = requireRole('ADMIN', 'MANAGER', 'USER')
 
 /**
  * Row-level guard for routes like /bids/:id
  *
- * Your requested policy:
- * - ADMIN: full
- * - ESTIMATOR: full
- * - VIEWER: read-only (GET only)
- *
- * MANAGER: (optional) If you still use MANAGER elsewhere, treat like read-only here
- *          or add to allow list below as you prefer.
+ * Policy:
+ * - ADMIN & MANAGER: full access
+ * - USER: can only access their own bids (ownerId check)
  */
 export async function canAccessBid(req: Request, res: Response, next: NextFunction) {
   const user = req.user
@@ -41,25 +36,24 @@ export async function canAccessBid(req: Request, res: Response, next: NextFuncti
   const bidId = Number(req.params.id)
   if (!Number.isFinite(bidId)) return res.status(400).json({ error: 'Invalid id' })
 
-  // Ensure the bid exists (prevents leaking 200/404 differences by role)
+  // Ensure the bid exists
   const bid = await prisma.bid.findUnique({
     where: { id: bidId },
-    select: { id: true }, // ownerId not needed now since estimator is full access
+    select: { id: true, ownerId: true },
   })
   if (!bid) return res.status(404).json({ error: 'Not found' })
 
-  // Full access for ADMIN & ESTIMATOR
-  if (user.role === 'ADMIN' || user.role === 'ESTIMATOR') {
+  // Full access for ADMIN & MANAGER
+  if (user.role === 'ADMIN' || user.role === 'MANAGER') {
     return next()
   }
 
-  // VIEWER is read-only (GET only)
-  if (user.role === 'VIEWER') {
-    if (req.method === 'GET') return next()
+  // USER can only access their own bids
+  if (user.role === 'USER') {
+    if (bid.ownerId === user.id) return next()
     return res.status(403).json({ error: 'Forbidden' })
   }
 
-  // Default for any other role (e.g., MANAGER if present): read-only
-  if (req.method === 'GET') return next()
+  // Default deny
   return res.status(403).json({ error: 'Forbidden' })
 }
