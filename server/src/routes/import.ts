@@ -100,17 +100,26 @@ importer.post('/bids', upload.single('file'), async (req, res) => {
 
     const key = `${projectName}||${clientCompany}`;
     if (!grouped[key]) {
+      // Handle various column name formats (case-insensitive, partial matches)
+      const getField = (names: string[]) => {
+        for (const name of names) {
+          const value = r[name];
+          if (value !== undefined && value !== null) return String(value).trim();
+        }
+        return '';
+      };
+
       grouped[key] = {
         projectName,
         clientCompany,
-        contactName: String(r.contactName ?? '').trim() || null,
-        estimatorEmail: String(r.estimatorEmail ?? '').trim() || null,
-        proposalDate: String(r.proposalDate ?? '').trim(),
-        dueDate: String(r.dueDate ?? '').trim(),
-        followUpOn: String(r.followUpOn ?? '').trim(),
-        jobLocation: String(r.jobLocation ?? '').trim() || null,
-        leadSource: String(r.leadSource ?? '').trim() || null,
-        bidStatus: String(r.bidStatus ?? 'Active').trim(),
+        contactName: getField(['contactName', 'contact']) || null,
+        estimatorEmail: getField(['estimatorEmail', 'estimator']) || null,
+        proposalDate: getField(['proposalDate', 'alDate', 'proposal']),
+        dueDate: getField(['dueDate', 'due']),
+        followUpOn: getField(['followUpOn', 'followUp']),
+        jobLocation: getField(['jobLocation', 'location']) || null,
+        leadSource: getField(['leadSource', 'source']) || null,
+        bidStatus: getField(['bidStatus', 'status']) || 'Active',
         scopes: [],
       };
     }

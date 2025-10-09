@@ -61,6 +61,8 @@ export default function Bids() {
 
   const [deletingId, setDeletingId] = React.useState<number | null>(null)
   const [pendingDelete, setPendingDelete] = React.useState<PendingDelete>(null)
+  const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set())
+  const [deletingSelected, setDeletingSelected] = React.useState(false)
 
   const load = React.useCallback(() => {
     const q = new URLSearchParams()
@@ -104,6 +106,51 @@ export default function Bids() {
     setPendingDelete(null)
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === viewRows.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(viewRows.map(r => r.id)))
+    }
+  }
+
+  async function deleteSelected() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} selected bid(s)? This cannot be undone.`)) return
+
+    setDeletingSelected(true)
+    const errors: string[] = []
+
+    for (const id of selectedIds) {
+      try {
+        await delJSON(`/bids/${id}`)
+        setRows(prev => prev.filter(x => x.id !== id))
+      } catch (e: any) {
+        const bid = rows.find(r => r.id === id)
+        errors.push(`${bid?.projectName || id}: ${e?.message || e}`)
+      }
+    }
+
+    setSelectedIds(new Set())
+    setDeletingSelected(false)
+
+    if (errors.length > 0) {
+      alert(`Some deletions failed:\n${errors.join('\n')}`)
+    }
+  }
+
   const viewRows = React.useMemo(() => {
     let r = rows.map(row => {
       const dueIn = daysBetween(row.proposalDate ?? null, row.dueDate ?? null)
@@ -139,12 +186,25 @@ export default function Bids() {
       <div className="flex flex-col gap-4">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-blue-600 to-green-600 bg-clip-text text-transparent">
               All Bids
             </h1>
-            <p className="text-slate-600 mt-1">Manage and track all your project bids</p>
+            <p className="text-slate-700 mt-1">Manage and track all your project bids</p>
           </div>
           <div className="flex items-center gap-3">
+            {selectedIds.size > 0 && (
+              <button
+                type="button"
+                onClick={deleteSelected}
+                disabled={deletingSelected}
+                className="px-5 py-2.5 rounded-lg bg-gradient-to-r from-red-500 to-red-600 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                {deletingSelected ? 'Deleting...' : `Delete ${selectedIds.size} Selected`}
+              </button>
+            )}
             <label className="cursor-pointer px-5 py-2.5 rounded-lg bg-gradient-to-r from-green-500 to-emerald-600 text-white font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
@@ -227,7 +287,7 @@ export default function Bids() {
               className={
                 'px-6 py-2.5 rounded-xl font-semibold text-sm transition-all duration-200 whitespace-nowrap ' +
                 (active
-                  ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg transform scale-105'
+                  ? 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white shadow-lg transform scale-105'
                   : 'bg-white text-slate-700 border-2 border-slate-200 hover:border-blue-300 hover:shadow-md')
               }
             >
@@ -243,6 +303,14 @@ export default function Bids() {
           <table className="w-full">
             <thead className="bg-gradient-to-r from-slate-50 to-slate-100 border-b-2 border-slate-200">
               <tr>
+                <th className="px-4 py-4 w-12">
+                  <input
+                    type="checkbox"
+                    checked={viewRows.length > 0 && selectedIds.size === viewRows.length}
+                    onChange={toggleSelectAll}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                  />
+                </th>
                 <th className="px-4 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Project Name</th>
                 <th className="px-4 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Client</th>
                 <th className="px-4 py-4 text-left text-xs font-bold text-slate-700 uppercase tracking-wider">Amount</th>
@@ -256,7 +324,15 @@ export default function Bids() {
             </thead>
             <tbody className="divide-y divide-slate-200">
               {viewRows.map((r) => (
-                <tr key={r.id} className="hover:bg-slate-50 transition-colors duration-150">
+                <tr key={r.id} className={`hover:bg-slate-50 transition-colors duration-150 ${selectedIds.has(r.id) ? 'bg-blue-50' : ''}`}>
+                  <td className="px-4 py-4">
+                    <input
+                      type="checkbox"
+                      checked={selectedIds.has(r.id)}
+                      onChange={() => toggleSelect(r.id)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+                    />
+                  </td>
                   <td className="px-4 py-4 text-sm font-semibold text-slate-900">{r.projectName}</td>
                   <td className="px-4 py-4 text-sm text-slate-700">{r.clientName}</td>
                   <td className="px-4 py-4 text-sm font-medium text-green-700">{currency(r.amount)}</td>
@@ -318,7 +394,7 @@ export default function Bids() {
               ))}
               {viewRows.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="px-4 py-16 text-center">
+                  <td colSpan={10} className="px-4 py-16 text-center">
                     <div className="flex flex-col items-center gap-3">
                       <svg className="w-16 h-16 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />

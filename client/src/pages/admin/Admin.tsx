@@ -21,11 +21,11 @@ const ROLES: AppRole[] = ['ADMIN', 'MANAGER', 'USER']
 const getRoleBadgeStyle = (role: AppRole) => {
   switch (role) {
     case 'ADMIN':
-      return 'bg-gradient-to-r from-purple-500 to-pink-500 text-white'
+      return 'bg-gradient-to-r from-blue-600 to-cyan-600 text-white'
     case 'MANAGER':
-      return 'bg-gradient-to-r from-blue-500 to-cyan-500 text-white'
+      return 'bg-gradient-to-r from-cyan-500 to-green-500 text-white'
     case 'USER':
-      return 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white'
+      return 'bg-gradient-to-r from-green-500 to-emerald-500 text-white'
   }
 }
 
@@ -62,29 +62,29 @@ export default function Admin() {
   React.useEffect(() => { load() }, [])
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-purple-50 p-8 font-sans">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-cyan-50 p-8 font-sans">
       {/* Header */}
       <div className="mb-8 animate-fade-in">
         <div className="flex items-center gap-3 mb-2">
           <div className="text-4xl">🛡️</div>
-          <h1 className="text-4xl font-black bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 bg-clip-text text-transparent">
+          <h1 className="text-4xl font-black bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 bg-clip-text text-transparent">
             Admin Panel
           </h1>
         </div>
-        <p className="text-slate-600 ml-16">Manage users and permissions</p>
+        <p className="text-slate-700 ml-16">Manage users and permissions</p>
       </div>
 
       {/* Main Card */}
       <div className="max-w-6xl mx-auto bg-white/80 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
         {/* Card Header */}
-        <div className="bg-gradient-to-r from-purple-600 via-pink-600 to-blue-600 p-6">
+        <div className="bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 p-6">
           <div className="flex justify-between items-center">
             <div>
               <h2 className="text-2xl font-bold text-white mb-1">User Management</h2>
-              <p className="text-purple-100 text-sm">{users.length} total users</p>
+              <p className="text-blue-100 text-sm">{users.length} total users</p>
             </div>
             <button
-              className="group bg-white text-purple-600 font-semibold px-6 py-3 rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
+              className="group bg-white text-blue-600 font-semibold px-6 py-3 rounded-xl hover:shadow-xl transition-all duration-300 hover:scale-105 flex items-center gap-2"
               onClick={() => setDialog({ kind: 'add' })}
             >
               <span className="text-xl group-hover:rotate-90 transition-transform duration-300">+</span>
@@ -97,7 +97,7 @@ export default function Admin() {
         <div className="p-6">
           {loading ? (
             <div className="flex flex-col items-center justify-center py-20">
-              <div className="w-16 h-16 border-4 border-purple-600 border-t-transparent rounded-full animate-spin mb-4"></div>
+              <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mb-4"></div>
               <p className="text-slate-600 font-medium">Loading users...</p>
             </div>
           ) : error ? (
@@ -122,7 +122,7 @@ export default function Admin() {
                   {users.map((u, idx) => (
                     <tr
                       key={u.id}
-                      className="border-t border-slate-100 hover:bg-gradient-to-r hover:from-purple-50 hover:to-blue-50 transition-all duration-200"
+                      className="border-t border-slate-100 hover:bg-gradient-to-r hover:from-blue-50 hover:to-cyan-50 transition-all duration-200"
                       style={{ animationDelay: `${idx * 50}ms` }}
                     >
                       <td className="px-6 py-4">
@@ -211,8 +211,8 @@ export default function Admin() {
 function Modal(props: { children: React.ReactNode; onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-40 flex items-center justify-center animate-fade-in">
-      <div className="absolute inset-0 bg-gradient-to-br from-purple-900/50 to-blue-900/50 backdrop-blur-sm" onClick={props.onClose} />
-      <div className="relative z-50 w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl border border-purple-200 animate-scale-in">
+      <div className="absolute inset-0 bg-gradient-to-br from-blue-900/50 to-cyan-900/50 backdrop-blur-sm" onClick={props.onClose} />
+      <div className="relative z-50 w-full max-w-lg rounded-3xl bg-white p-8 shadow-2xl border border-blue-200 animate-scale-in">
         {props.children}
       </div>
     </div>
@@ -266,7 +266,7 @@ function UserForm(props: {
     <form onSubmit={submit} className="space-y-5">
       <div className="flex items-center gap-3 mb-4">
         <div className="text-3xl">{isEdit ? '✏️' : '➕'}</div>
-        <div className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+        <div className="text-2xl font-bold bg-gradient-to-r from-blue-600 to-cyan-600 bg-clip-text text-transparent">
           {isEdit ? 'Edit User' : 'Add New User'}
         </div>
       </div>
@@ -274,7 +274,7 @@ function UserForm(props: {
       <label className="block">
         <div className="text-sm font-semibold text-slate-700 mb-2">Name</div>
         <input
-          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none"
+          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
           placeholder="Enter full name"
           value={name}
           onChange={e => setName(e.target.value)}
@@ -284,7 +284,7 @@ function UserForm(props: {
       <label className="block">
         <div className="text-sm font-semibold text-slate-700 mb-2">Email</div>
         <input
-          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none"
+          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
           type="email"
           placeholder="user@example.com"
           value={email}
@@ -308,7 +308,7 @@ function UserForm(props: {
           {isEdit ? 'New Password (optional)' : 'Password'}
         </div>
         <input
-          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-purple-500 focus:ring-4 focus:ring-purple-100 transition-all outline-none"
+          className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-100 transition-all outline-none"
           type="password"
           placeholder="Enter password"
           value={password}
@@ -332,7 +332,7 @@ function UserForm(props: {
         </button>
         <button
           type="submit"
-          className="px-6 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-blue-600 text-white font-semibold hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
+          className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold hover:shadow-xl transition-all hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
           disabled={saving}
         >
           {saving ? '⏳ Saving...' : isEdit ? '💾 Save Changes' : '✨ Create User'}

@@ -18,6 +18,8 @@ export default function Contacts() {
   const [adding, setAdding] = React.useState(false)
   const [deletingId, setDeletingId] = React.useState<number | null>(null)
   const [search, setSearch] = React.useState('')
+  const [selectedIds, setSelectedIds] = React.useState<Set<number>>(new Set())
+  const [deletingSelected, setDeletingSelected] = React.useState(false)
 
   const load = React.useCallback(() => {
     getJSON<Contact[]>('/contacts').then(setContacts)
@@ -63,6 +65,51 @@ export default function Contacts() {
     }
   }
 
+  function toggleSelect(id: number) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+      return next
+    })
+  }
+
+  function toggleSelectAll() {
+    if (selectedIds.size === filteredContacts.length) {
+      setSelectedIds(new Set())
+    } else {
+      setSelectedIds(new Set(filteredContacts.map(c => c.id)))
+    }
+  }
+
+  async function deleteSelected() {
+    if (selectedIds.size === 0) return
+    if (!confirm(`Delete ${selectedIds.size} selected contact(s)? This cannot be undone.`)) return
+
+    setDeletingSelected(true)
+    const errors: string[] = []
+
+    for (const id of selectedIds) {
+      try {
+        await delJSON(`/contacts/${id}`)
+      } catch (e: any) {
+        const contact = contacts.find(c => c.id === id)
+        errors.push(`${contact?.name || id}: ${e?.message || e}`)
+      }
+    }
+
+    setSelectedIds(new Set())
+    setDeletingSelected(false)
+    load()
+
+    if (errors.length > 0) {
+      alert(`Some deletions failed:\n${errors.join('\n')}`)
+    }
+  }
+
   const filteredContacts = React.useMemo(() => {
     if (!search) return contacts
     const term = search.toLowerCase()
@@ -78,9 +125,9 @@ export default function Contacts() {
     <div className="space-y-6 font-sans">
       {/* Modern Header */}
       <div className="relative">
-        <div className="absolute inset-0 bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl blur-xl opacity-20"></div>
-        <div className="relative bg-gradient-to-r from-purple-600 via-pink-600 to-red-600 rounded-2xl p-6 shadow-xl">
-          <div className="flex items-center justify-between">
+        <div className="absolute inset-0 bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 rounded-2xl blur-xl opacity-20"></div>
+        <div className="relative bg-gradient-to-r from-blue-600 via-cyan-600 to-green-600 rounded-2xl p-6 shadow-xl">
+          <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <div className="w-14 h-14 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center">
                 <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -89,18 +136,42 @@ export default function Contacts() {
               </div>
               <div>
                 <h1 className="text-3xl font-bold text-white tracking-tight">Contacts</h1>
-                <p className="text-purple-50 text-sm mt-1">Manage your professional network</p>
+                <p className="text-blue-50 text-sm mt-1">Manage your professional network</p>
               </div>
             </div>
-            <button
-              onClick={() => setAdding(true)}
-              className="group px-5 py-2.5 rounded-lg bg-white text-purple-600 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
-            >
-              <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
-              </svg>
-              Add Contact
-            </button>
+            <div className="flex items-center gap-3">
+              {selectedIds.size > 0 && (
+                <>
+                  <button
+                    type="button"
+                    onClick={toggleSelectAll}
+                    className="px-4 py-2.5 rounded-lg bg-white/20 backdrop-blur text-white font-medium hover:bg-white/30 transition-all duration-200"
+                  >
+                    {selectedIds.size === filteredContacts.length ? 'Deselect All' : 'Select All'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={deleteSelected}
+                    disabled={deletingSelected}
+                    className="px-5 py-2.5 rounded-lg bg-red-500 text-white font-semibold shadow-lg hover:shadow-xl hover:bg-red-600 transition-all duration-200 flex items-center gap-2 disabled:opacity-50"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    {deletingSelected ? 'Deleting...' : `Delete ${selectedIds.size}`}
+                  </button>
+                </>
+              )}
+              <button
+                onClick={() => setAdding(true)}
+                className="group px-5 py-2.5 rounded-lg bg-white text-blue-600 font-semibold shadow-lg hover:shadow-xl hover:scale-105 transition-all duration-200 flex items-center gap-2"
+              >
+                <svg className="w-5 h-5 group-hover:rotate-90 transition-transform duration-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 4v16m8-8H4" />
+                </svg>
+                Add Contact
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -112,7 +183,7 @@ export default function Contacts() {
           placeholder="Search contacts by name, company, email, or title..."
           value={search}
           onChange={e => setSearch(e.target.value)}
-          className="w-full px-4 py-3 pl-12 rounded-xl border border-slate-200 focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all"
+          className="w-full px-4 py-3 pl-12 rounded-xl border border-slate-200 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all"
         />
         <svg className="w-5 h-5 text-slate-400 absolute left-4 top-1/2 transform -translate-y-1/2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -121,16 +192,16 @@ export default function Contacts() {
 
       {/* Stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-gradient-to-br from-purple-500 to-purple-600 rounded-xl p-4 text-white shadow-md">
-          <div className="text-purple-100 text-xs font-medium mb-1">Total Contacts</div>
+        <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-white shadow-md">
+          <div className="text-blue-100 text-xs font-medium mb-1">Total Contacts</div>
           <div className="text-3xl font-bold">{contacts.length}</div>
         </div>
-        <div className="bg-gradient-to-br from-pink-500 to-pink-600 rounded-xl p-4 text-white shadow-md">
-          <div className="text-pink-100 text-xs font-medium mb-1">Companies</div>
+        <div className="bg-gradient-to-br from-cyan-500 to-cyan-600 rounded-xl p-4 text-white shadow-md">
+          <div className="text-cyan-100 text-xs font-medium mb-1">Companies</div>
           <div className="text-3xl font-bold">{new Set(contacts.map(c => c.company.id)).size}</div>
         </div>
-        <div className="bg-gradient-to-br from-red-500 to-red-600 rounded-xl p-4 text-white shadow-md">
-          <div className="text-red-100 text-xs font-medium mb-1">With Email</div>
+        <div className="bg-gradient-to-br from-green-500 to-green-600 rounded-xl p-4 text-white shadow-md">
+          <div className="text-green-100 text-xs font-medium mb-1">With Email</div>
           <div className="text-3xl font-bold">{contacts.filter(c => c.email).length}</div>
         </div>
       </div>
@@ -138,15 +209,23 @@ export default function Contacts() {
       {/* Contacts Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {filteredContacts.map(c => (
-          <div key={c.id} className="bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-200 border border-slate-200 group">
-            <div className="flex items-start justify-between mb-3">
-              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-400 to-pink-500 flex items-center justify-center text-white font-bold text-lg">
+          <div key={c.id} className={`bg-white rounded-xl p-5 shadow-md hover:shadow-lg transition-all duration-200 border-2 group relative ${selectedIds.has(c.id) ? 'border-blue-500 bg-blue-50' : 'border-slate-200'}`}>
+            <div className="absolute top-3 left-3">
+              <input
+                type="checkbox"
+                checked={selectedIds.has(c.id)}
+                onChange={() => toggleSelect(c.id)}
+                className="w-5 h-5 rounded border-slate-300 text-blue-600 focus:ring-2 focus:ring-blue-500 cursor-pointer"
+              />
+            </div>
+            <div className="flex items-start justify-between mb-3 pl-8">
+              <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-400 to-green-500 flex items-center justify-center text-white font-bold text-lg shadow-md">
                 {c.name.charAt(0).toUpperCase()}
               </div>
               <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button
                   onClick={() => setEditing(c)}
-                  className="w-8 h-8 rounded-lg bg-purple-50 text-purple-600 hover:bg-purple-100 flex items-center justify-center transition-colors"
+                  className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center justify-center transition-colors"
                   title="Edit"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -190,7 +269,7 @@ export default function Contacts() {
                   <svg className="w-4 h-4 text-slate-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
                   </svg>
-                  <a href={`mailto:${c.email}`} className="text-purple-600 hover:text-purple-800 hover:underline truncate">
+                  <a href={`mailto:${c.email}`} className="text-blue-600 hover:text-blue-800 hover:underline truncate">
                     {c.email}
                   </a>
                 </div>
@@ -241,7 +320,7 @@ export default function Contacts() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Name *</label>
                 <input
-                  className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={editing.name}
                   onChange={e => setEditing({ ...editing, name: e.target.value })}
                 />
@@ -249,7 +328,7 @@ export default function Contacts() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
                 <input
-                  className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="CEO, PM, Estimator…"
                   value={editing.title ?? ''}
                   onChange={e => setEditing({ ...editing, title: e.target.value })}
@@ -258,7 +337,7 @@ export default function Contacts() {
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Company *</label>
                 <select
-                  className="select focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="select focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={editing.company.id}
                   onChange={e =>
                     setEditing({
@@ -279,7 +358,7 @@ export default function Contacts() {
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
                 <input
                   type="email"
-                  className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={editing.email || ''}
                   onChange={e => setEditing({ ...editing, email: e.target.value })}
                 />
@@ -288,7 +367,7 @@ export default function Contacts() {
                 <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
                 <input
                   type="tel"
-                  className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                  className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   value={editing.phone || ''}
                   onChange={e => setEditing({ ...editing, phone: e.target.value })}
                 />
@@ -304,7 +383,7 @@ export default function Contacts() {
               </button>
               <button
                 onClick={save}
-                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
+                className="flex-1 px-4 py-2.5 rounded-lg bg-gradient-to-r from-blue-600 to-green-600 text-white font-semibold hover:shadow-lg hover:scale-105 transition-all duration-200"
               >
                 Save Changes
               </button>
@@ -361,7 +440,7 @@ function AddContactModal({
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Name *</label>
             <input
-              className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={form.name}
               onChange={e => setForm((f: any) => ({ ...f, name: e.target.value }))}
             />
@@ -369,7 +448,7 @@ function AddContactModal({
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Title</label>
             <input
-              className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="CEO, PM, Estimator…"
               value={form.title}
               onChange={e => setForm((f: any) => ({ ...f, title: e.target.value }))}
@@ -378,7 +457,7 @@ function AddContactModal({
           <div>
             <label className="block text-sm font-semibold text-slate-700 mb-2">Company *</label>
             <select
-              className="select focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="select focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={form.companyId}
               onChange={e => setForm((f: any) => ({ ...f, companyId: e.target.value }))}
             >
@@ -392,7 +471,7 @@ function AddContactModal({
             <label className="block text-sm font-semibold text-slate-700 mb-2">Email</label>
             <input
               type="email"
-              className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={form.email}
               onChange={e => setForm((f: any) => ({ ...f, email: e.target.value }))}
             />
@@ -401,7 +480,7 @@ function AddContactModal({
             <label className="block text-sm font-semibold text-slate-700 mb-2">Phone</label>
             <input
               type="tel"
-              className="input focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+              className="input focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               value={form.phone}
               onChange={e => setForm((f: any) => ({ ...f, phone: e.target.value }))}
             />
