@@ -17,7 +17,8 @@ NC='\033[0m' # No Color
 cd /var/www/track-my-bids/
 
 echo -e "${BLUE}📥 Pulling latest changes from GitHub...${NC}"
-git pull origin main
+git fetch origin
+git reset --hard origin/main
 
 echo -e "${BLUE}📦 Installing server dependencies...${NC}"
 cd server
