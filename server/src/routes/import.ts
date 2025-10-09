@@ -70,6 +70,11 @@ importer.post('/bids', upload.single('file'), async (req, res) => {
 
   const rows = parseImportCSV(req.file.buffer);
 
+  // Debug: log first row columns to help troubleshoot
+  if (rows.length > 0) {
+    console.log('[CSV Import] Detected columns:', Object.keys(rows[0]));
+  }
+
   // Group by projectName + clientCompany (so multiple scope lines combine into one bid)
   const grouped: Record<
     string,
@@ -103,8 +108,18 @@ importer.post('/bids', upload.single('file'), async (req, res) => {
       // Handle various column name formats (case-insensitive, partial matches)
       const getField = (names: string[]) => {
         for (const name of names) {
-          const value = r[name];
-          if (value !== undefined && value !== null) return String(value).trim();
+          // Try exact match first
+          if (r[name] !== undefined && r[name] !== null) {
+            return String(r[name]).trim();
+          }
+          // Try case-insensitive match
+          const lowerName = name.toLowerCase();
+          for (const key of Object.keys(r)) {
+            if (key.toLowerCase() === lowerName) {
+              const value = r[key];
+              if (value !== undefined && value !== null) return String(value).trim();
+            }
+          }
         }
         return '';
       };
@@ -116,7 +131,7 @@ importer.post('/bids', upload.single('file'), async (req, res) => {
         estimatorEmail: getField(['estimatorEmail', 'estimator']) || null,
         proposalDate: getField(['proposalDate', 'alDate', 'proposal']),
         dueDate: getField(['dueDate', 'due']),
-        followUpOn: getField(['followUpOn', 'followUp']),
+        followUpOn: getField(['followUpOn', 'followUp', 'follow-up', 'follow_up']),
         jobLocation: getField(['jobLocation', 'location']) || null,
         leadSource: getField(['leadSource', 'source']) || null,
         bidStatus: getField(['bidStatus', 'status']) || 'Active',
