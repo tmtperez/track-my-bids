@@ -1,0 +1,9 @@
+# Code Owners - automatically request reviews from these users
+
+# Default owners for everything in the repo
+* @tmtperez
+
+# Specific areas (add team member handles as they join)
+# /server/ @tmtperez @new-developer
+# /client/ @tmtperez @new-developer
+# *.md @tmtperez

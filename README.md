@@ -13,14 +13,24 @@ Full‑stack app for managing construction bids for **Barfield Fence & Fabricati
 
 ## Quick Start (Local Dev)
 
-### 1) Install dependencies
+### 1) Clone and install
 ```bash
-# from project root
-cd server && npm install && cd ..
-cd client && npm install && cd ..
+git clone https://github.com/tmtperez/track-my-bids.git
+cd track-my-bids
+npm install
 ```
 
-### 2) Initialize database (SQLite) and seed
+### 2) Set up environment files
+```bash
+# Copy environment templates
+cp .env.example .env
+cp server/.env.example server/.env
+cp client/.env.local.example client/.env.local
+
+# Update values in .env files as needed
+```
+
+### 3) Initialize database (SQLite) and seed
 ```bash
 cd server
 # Generate Prisma client & create DB
@@ -28,18 +38,18 @@ npx prisma generate
 npx prisma migrate dev --name init
 # Seed demo data
 npm run seed
-# start API
-npm run dev
+cd ..
 ```
 
-### 3) Start the web client
+### 4) Start development servers
 ```bash
-cd ../client
+# From project root - starts both client and server
 npm run dev
-# open http://localhost:5173
 ```
 
 Server runs on http://localhost:4000, client on http://localhost:5173
+
+**For team collaboration, see [CONTRIBUTING.md](./CONTRIBUTING.md)**
 
 ---
 

@@ -1,9 +1,8 @@
-@"
 # -----------------------------
 # General Node / Monorepo
 # -----------------------------
 node_modules/
-npm-debug.log*
+npm_debug.log*
 yarn-debug.log*
 pnpm-debug.log*
 *.log
@@ -40,4 +39,6 @@ server/uploads/
 Thumbs.db
 .idea/
 .vscode/
-"@ | Set-Content .gitignore
+*.swp
+*.swo
+*~
